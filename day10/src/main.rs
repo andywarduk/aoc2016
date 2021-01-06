@@ -1,5 +1,5 @@
 use memmap::Mmap;
-use std::{collections::{HashMap, VecDeque}, fs::File, io::{BufRead, BufReader}};
+use std::{collections::{HashMap, VecDeque}, fs::File, io::{BufRead, BufReader}, rc::Rc};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lines = load_input("input10.txt")?;
@@ -31,10 +31,10 @@ struct State {
 
 struct Movement {
     chip: u16,
-    to: Dest
+    to: Rc<Dest>
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 enum Dest {
     Output(u16),
     Bot(u16)
@@ -52,8 +52,8 @@ impl Dest {
 
 struct Bot {
     num: u16,
-    lo_to: Dest,
-    hi_to: Dest,
+    lo_to: Rc<Dest>,
+    hi_to: Rc<Dest>,
     chips: Vec<u16>
 }
 
@@ -126,8 +126,8 @@ fn parse_instructions(lines: &Vec<String>) -> (VecDeque<Movement>, HashMap<u16, 
 
                 bots.insert(bot_no, Bot {
                     num: bot_no,
-                    lo_to: lo,
-                    hi_to: hi,
+                    lo_to: Rc::new(lo),
+                    hi_to: Rc::new(hi),
                     chips: Vec::new()
                 });
             },
@@ -137,7 +137,7 @@ fn parse_instructions(lines: &Vec<String>) -> (VecDeque<Movement>, HashMap<u16, 
 
                 inputs.push_back(Movement {
                     chip: val,
-                    to: Dest::Bot(bot)
+                    to: Rc::new(Dest::Bot(bot))
                 })
             }
             _ => panic!("Can't parse line: {}", l)
