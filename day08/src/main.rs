@@ -1,5 +1,6 @@
 use memmap::Mmap;
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{borrow::Cow, fs::File, io::{BufRead, BufReader}};
+use gif::{Frame, Encoder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lines = load_input("input08.txt")?;
@@ -14,35 +15,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 const ROWS: usize = 6;
 const COLS: usize = 50;
 
-type Board = [[char; 50]; 6];
+const GIF_MULT: u8 = 8;
+
+const GIF_W: u16 = (COLS * GIF_MULT as usize) as u16;
+const GIF_H: u16 = (ROWS * GIF_MULT as usize) as u16;
+
+type Board = [[char; COLS]; ROWS];
 
 fn process(commands: &Vec<Command>) {
     let mut board: Board = [[' '; COLS]; ROWS];
 
+    // Start GIF
+    let mut image = File::create("output08.gif").unwrap();
+    let color_map = &[0, 0, 0, 0xFF, 0xFF, 0xFF];
+    let mut encoder = Encoder::new(&mut image, GIF_W, GIF_H, color_map).unwrap();
+
+    // Write GIF frame
+    write_gif_board(&board, &mut encoder);
+
+    // Process commands
     for cmd in commands {
         match cmd {
-            Command::Rect(w, h) => rect(&mut board, *w, *h),
-            Command::RotRow(y, shift) => rot_row_by(&mut board, *y, *shift),
-            Command::RotCol(x, shift) => rot_col_by(&mut board, *x, *shift)
+            Command::Rect(w, h) => rect(&mut board, &mut encoder, *w, *h),
+            Command::RotRow(y, shift) => rot_row_by(&mut board, &mut encoder, *y, *shift),
+            Command::RotCol(x, shift) => rot_col_by(&mut board, &mut encoder, *x, *shift)
         }
     }
 
     println!("{} pixels lit (part 1)", count_lit(&board));
 
+    println!("");
+
     dump_board(&board);
 }
 
-fn rect(board: &mut Board, w: u8, h: u8) {
+fn rect(board: &mut Board, encoder: &mut Encoder<&mut File>, w: u8, h: u8) {
     for y in 0..h {
         for x in 0..w {
             board[y as usize][x as usize] = '#';
         }
     }
+
+    // Write GIF frame
+    write_gif_board(&board, encoder);
 }
 
-fn rot_row_by(board: &mut Board, y: u8, shift: u8) {
+fn rot_row_by(board: &mut Board, encoder: &mut Encoder<&mut File>, y: u8, shift: u8) {
     for _ in 0..shift {
-        rot_row(board, y)
+        rot_row(board, y);
+
+        // Write GIF frame
+        write_gif_board(&board, encoder);
     }
 }
 
@@ -56,9 +79,12 @@ fn rot_row(board: &mut Board, y: u8) {
     board[y as usize][0] = save_char;
 }
 
-fn rot_col_by(board: &mut Board, x: u8, shift: u8) {
+fn rot_col_by(board: &mut Board, encoder: &mut Encoder<&mut File>, x: u8, shift: u8) {
     for _ in 0..shift {
-        rot_col(board, x)
+        rot_col(board, x);
+
+        // Write GIF frame
+        write_gif_board(&board, encoder);
     }
 }
 
@@ -88,6 +114,35 @@ fn dump_board(board: &Board) {
     for row in board {
         println!("{}", row.iter().collect::<String>());
     }
+}
+
+fn write_gif_board(board: &Board, encoder: &mut Encoder<&mut File>) {
+    let mut frame_data: [u8; (GIF_W * GIF_H) as usize] = [0; (GIF_W * GIF_H) as usize];
+
+    // Build frame
+    for y in 0..ROWS {
+        for x in 0..COLS {
+            if board[y][x] == '#' {
+                let gx_orgn = x * GIF_MULT as usize;
+                let gy_orgn = y * GIF_MULT as usize;
+
+                for gy in gy_orgn..gy_orgn + GIF_MULT as usize {
+                    let out_elem = (gy * GIF_W as usize) + gx_orgn;
+                    for i in 0..GIF_MULT as usize {
+                        frame_data[out_elem + i] = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Write frame
+    let mut frame = Frame::default();
+    frame.delay = 3;
+    frame.width = GIF_W;
+    frame.height = GIF_H;
+    frame.buffer = Cow::Borrowed(&frame_data);
+    encoder.write_frame(&frame).unwrap();
 }
 
 #[derive(Debug)]
