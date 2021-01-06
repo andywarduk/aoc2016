@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet, hash_map::DefaultHasher}, fmt, hash::{Hash, Hasher}};
+use std::{collections::HashMap, fmt};
 
 /*
     first floor: strontium generator, strontium-compatible microchip, plutonium generator, plutonium-compatible microchip
@@ -7,115 +7,127 @@ use std::{collections::{HashMap, HashSet, hash_map::DefaultHasher}, fmt, hash::{
     fourth floor: 
 
     F4
-    F3                  TM
-    F2               TG    RG RM CG CM
-    F1 E SG SM PG PM
+    F3                  TC
+    F2               TG    RG RC CG CC
+    F1 E SG SC PG PC
 */
 
 fn main() {
+    // Initialise state
     let mut state = State {
         floor: 0,
-        map: vec![Floor::new(), Floor::new(), Floor::new(), Floor::new()],
+        map: vec![Floor(0), Floor(0), Floor(0), Floor(0)],
         moves: 0,
         last_moves: Vec::new(),
     };
 
-    state.map[0].add(Source::Strontium, &Type::Gen);
-    state.map[0].add(Source::Strontium, &Type::Chip);
-    state.map[0].add(Source::Plutonium, &Type::Gen);
-    state.map[0].add(Source::Plutonium, &Type::Chip);
+    // Add objects (from input)
+    state.map[0].add_obj(Source::Strontium, Type::Gen);
+    state.map[0].add_obj(Source::Strontium, Type::Chip);
+    state.map[0].add_obj(Source::Plutonium, Type::Gen);
+    state.map[0].add_obj(Source::Plutonium, Type::Chip);
 
-    state.map[1].add(Source::Thulium, &Type::Gen);
-    state.map[1].add(Source::Ruthenium, &Type::Gen);
-    state.map[1].add(Source::Ruthenium, &Type::Chip);
-    state.map[1].add(Source::Curium, &Type::Gen);
-    state.map[1].add(Source::Curium, &Type::Chip);
+    state.map[1].add_obj(Source::Thulium, Type::Gen);
+    state.map[1].add_obj(Source::Ruthenium, Type::Gen);
+    state.map[1].add_obj(Source::Ruthenium, Type::Chip);
+    state.map[1].add_obj(Source::Curium, Type::Gen);
+    state.map[1].add_obj(Source::Curium, Type::Chip);
 
-    state.map[2].add(Source::Thulium, &Type::Chip);
+    state.map[2].add_obj(Source::Thulium, Type::Chip);
 
+    // Initialise answer
     let mut answer = Answer {
         min_moves: usize::MAX,
         moves: Vec::new(),
         seen_states: HashMap::new()
     };
 
+    // Make the next move (recursively)
     next_move(&mut answer, &mut state);
 
-    println!("{} moves: {:?}", answer.min_moves, answer.moves);
+    // Print results
+    println!("{} moves (part 1)", answer.min_moves);
+    println!("Moved are: {:?}", answer.moves);
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 enum Type {
     Gen,
     Chip
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+const GEN_SHIFT: u8 = 8;
+
+#[derive(Debug, Clone, Copy)]
 enum Source {
     Strontium,
     Plutonium,
     Thulium,
     Ruthenium,
     Curium,
-#[cfg(test)]
-    Hydrogen,
-#[cfg(test)]
-    Lithium,
 }
+
+const SOURCE_VEC: [Source; 5] = [Source::Strontium, Source::Plutonium, Source::Thulium, Source::Ruthenium, Source::Curium];
 
 #[derive(Clone, Debug)]
-struct Floor {
-    gen: HashSet<Source>,
-    chip: HashSet<Source>
-}
+struct Floor(u16);
 
 impl Floor {
-    fn new() -> Self {
-        Floor {
-            gen: HashSet::new(),
-            chip: HashSet::new()
-        }
+    fn add(&mut self, object: &Object) {
+        self.0 |= object.0;
     }
 
-    fn add(&mut self, src: Source, typ: &Type) {
-        if !match typ {
-            Type::Chip => self.chip.insert(src),
-            Type::Gen => self.gen.insert(src),
-        } {
-            panic!("Error adding {:?} to floor", typ)
-        }
+    fn add_obj(&mut self, src: Source, typ: Type) {
+        self.add(&parts_to_object(&src, &typ))
     }
 
-    fn remove(&mut self, src: &Source, typ: &Type) {
-        if !match typ {
-            Type::Chip => self.chip.remove(src),
-            Type::Gen => self.gen.remove(src),
-        } {
-            panic!("Error adding {:?} {:?} to floor", typ, src)
-        }
+    fn remove(&mut self, object: &Object) {
+        self.0 &= !object.0
     }
-}
 
-impl Hash for Floor {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        // Build u64 for the floor state
-        let mut bits: u64 = 0;
+    fn get_objects(&self) -> Vec<Object> {
+        let mut result = Vec::new();
+    
+        for e in SOURCE_VEC.iter() {
+            let src_u8 = *e as u8;
+            let cobj = Object(1 << src_u8);
+            let gobj = Object(1 << (GEN_SHIFT + src_u8));
+    
+            if self.0 & cobj.0 != 0 {
+                result.push(cobj)
+            }
 
-        for g in &self.gen {
-            let bit = 1 << (*g as u8);
-            bits |= bit;
+            if self.0 & gobj.0 != 0 {
+                result.push(gobj)
+            }
         }
-
-        for c in &self.chip {
-            let bit = 1 << 32 + (*c as u8);
-            bits |= bit;
-        }
-
-        bits.hash(state);
+    
+        result
     }
 }
 
-type Object = (Source, Type);
+#[derive(Clone)]
+struct Object(u16);
+
+impl fmt::Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for e in SOURCE_VEC.iter() {
+            let cbit = 1 << *e as u8;
+            let gbit = 1 << (GEN_SHIFT + *e as u8);
+
+            if self.0 & cbit != 0 {
+                return f.write_fmt(format_args!("{:?}-{:?}", *e, Type::Chip))
+            }
+
+            if self.0 & gbit != 0 {
+                return f.write_fmt(format_args!("{:?}-{:?}", *e, Type::Gen))
+            }
+        }
+
+        f.write_fmt(format_args!("Invalid object: {}", self.0))
+    }
+}
+
 type Map = Vec<Floor>;
 
 #[derive(Clone)]
@@ -130,7 +142,7 @@ impl State {
     fn make_move(&mut self, answer: &mut Answer, mv: Move) {
         let new_floor;
 
-        // Calculat new floor
+        // Calculate new floor
         match mv {
             Move::One(dir, _) | Move::Two(dir, _, _) => {
                 new_floor = (self.floor as isize + dir as isize) as usize;
@@ -170,11 +182,11 @@ impl State {
     }
 
     fn finished(&self) -> bool {
-        self.map[0].chip.len() == 0 && self.map[1].chip.len() == 0 && self.map[2].chip.len() == 0 &&
-        self.map[0].gen.len() == 0 && self.map[1].gen.len() == 0 && self.map[2].gen.len() == 0
+        self.map[0].0 == 0 && self.map[1].0 == 0 && self.map[2].0 == 0
     }
 }
-#[derive(Clone, PartialEq)]
+
+#[derive(Clone)]
 enum Move {
     One(i8, Object),
     Two(i8, Object, Object)
@@ -191,8 +203,8 @@ impl fmt::Debug for Move {
         };
 
         match self {
-            Move::One(_, i1) => f.write_fmt(format_args!("{} [{:?}]", dir_str, i1)),
-            Move::Two(_, i1, i2) => f.write_fmt(format_args!("{} [{:?} {:?}]", dir_str, i1, i2))
+            Move::One(_, i1) => f.write_fmt(format_args!("{} with {:?}", dir_str, i1)),
+            Move::Two(_, i1, i2) => f.write_fmt(format_args!("{} {:?} and {:?}", dir_str, i1, i2))
         }
     }
 }
@@ -207,8 +219,13 @@ fn next_move(answer: &mut Answer, state: &mut State) {
     let floor = &state.map[state.floor];
     let mut moves: Vec<Move> = Vec::new();
 
-    let combinations = calc_combinations(&floor);
-    let singles = calc_singles(&floor);
+    let singles = floor.get_objects();
+    let combinations = calc_combinations(&singles);
+
+    #[cfg(test)]
+    println!("Singles: {:?}", singles);
+    #[cfg(test)]
+    println!("Combs: {:?}", combinations);
 
     if state.floor < 3 {
         // Consider double moves up
@@ -239,28 +256,22 @@ fn next_move(answer: &mut Answer, state: &mut State) {
                 moves.push(mv);
             }
         }
-
-        // Consider double moves down
-        for (i1, i2) in &combinations {
-            let mv = Move::Two(-1, i1.clone(), i2.clone());
-
-            if valid_move(&state, answer, &mv) {
-                moves.push(mv);
-            }
-        }
     }
     
-    //println!("Moves: {} {} {:?}", state.moves, state.floor, moves);
+    #[cfg(test)]
+    println!("Moves: {} {} {:?}", state.moves, state.floor, moves);
 
     for m in moves {
         let mut new_state = state.clone();
 
-        //println!("Moving: {:?}", m);
+        #[cfg(test)]
+        println!("Moving: {:?}", m);
 
         new_state.make_move(answer, m);
 
         if new_state.moves < answer.min_moves {
             if new_state.finished() {
+                #[cfg(test)]
                 println!("Found solution in {} moves", new_state.moves);
 
                 answer.min_moves = new_state.moves;
@@ -273,33 +284,36 @@ fn next_move(answer: &mut Answer, state: &mut State) {
 }
 
 fn valid_move(state: &State, answer: &Answer, mv: &Move) -> bool {
-    let mut new_map = state.map.clone();
-
-    let floor_from = &mut new_map[state.floor];
-
     // Move out and test
-    move_out(floor_from, &mv);
+    let mut floor_from = state.map[state.floor].clone();
+
+    move_out(&mut floor_from, &mv);
 
     if !floor_valid(&floor_from) {
         return false
     }
 
     // Move in and test
-    let floor_to;
+    let floor_num_to;
+    let mut floor_to;
 
     match mv {
         Move::One(dir, _) | Move::Two(dir, _, _)=> {
-            floor_to = &mut new_map[(state.floor as isize + *dir as isize) as usize];
+            floor_num_to = (state.floor as isize + *dir as isize) as usize;
+            floor_to = state.map[floor_num_to].clone();
         }
     };
 
-    move_in(floor_to, &mv);
+    move_in(&mut floor_to, &mv);
 
     if !floor_valid(&floor_to) {
         return false
     }
 
-    // Have we seen this state in less moves before?
+    // State valid - have we seen it in fewer moves before?
+    let mut new_map = state.map.clone();
+    new_map[state.floor] = floor_from;
+    new_map[floor_num_to] = floor_to;
     let hash = map_hash(&new_map);
     
     if let Some(seen) = answer.seen_states.get(&hash) {
@@ -313,36 +327,48 @@ fn valid_move(state: &State, answer: &Answer, mv: &Move) -> bool {
 
 fn move_out(from: &mut Floor, mv: &Move) {
     match mv {
-        Move::One(_, (src1, typ1)) => {
-            from.remove(src1, typ1);
+        Move::One(_, obj) => {
+            from.remove(obj);
         }
-        Move::Two(_, (src1, typ1), (src2, typ2)) => {
-            from.remove(src1, typ1);
-            from.remove(src2, typ2);
+        Move::Two(_, obj1, obj2) => {
+            from.remove(obj1);
+            from.remove(obj2);
         }
     }
 }
 
 fn move_in(to: &mut Floor, mv: &Move) {
     match mv {
-        Move::One(_, (src1, typ1)) => {
-            to.add(src1.clone(), typ1);
+        Move::One(_, obj) => {
+            to.add(obj);
         }
-        Move::Two(_, (src1, typ1), (src2, typ2)) => {
-            to.add(src1.clone(), typ1);
-            to.add(src2.clone(), typ2);
+        Move::Two(_, obj1, obj2) => {
+            to.add(obj1);
+            to.add(obj2);
         }
     }
 }
 
 fn floor_valid(floor: &Floor) -> bool {
-    for c in floor.chip.iter() {
-        if floor.gen.get(&c) == None {
-            // No generator for this chip - check there are no generators without chips
-            for g in floor.gen.iter() {
-                if floor.chip.get(&g) == None {
-                    // Got generator with no chip
-                    return false
+    // Enumerate all chips
+    for e1 in SOURCE_VEC.iter() {
+        let src1_u8 = *e1 as u8;
+        let cbit1 = 1 << src1_u8;
+
+        if floor.0 & cbit1 != 0 {
+            // Got this chip - look for matching generator
+            let gbit1 = 1 << (GEN_SHIFT + src1_u8);
+
+            if floor.0 & gbit1 == 0 {
+                // No generator for this chip - check there are no other generators
+                for e2 in SOURCE_VEC.iter() {
+                    let src2_u8 = *e2 as u8;
+                    let gbit2 = 1 << (GEN_SHIFT + src2_u8);
+
+                    if floor.0 & gbit2 != 0 {
+                        // Got a generator
+                        return false
+                    }
                 }
             }
         }
@@ -351,47 +377,12 @@ fn floor_valid(floor: &Floor) -> bool {
     true
 }
 
-fn calc_singles(floor: &Floor) -> Vec<(Source, Type)> {
+fn calc_combinations(singles: &Vec<Object>) -> Vec<(Object, Object)> {
     let mut result = Vec::new();
 
-    for c in floor.chip.iter() {
-        result.push((c.clone(), Type::Chip));
-    }
-
-    for g in floor.gen.iter() {
-        result.push((g.clone(), Type::Gen));
-    }
-
-    result
-}
-
-fn calc_combinations(floor: &Floor) -> Vec<((Source, Type), (Source, Type))> {
-    let mut result = Vec::new();
-
-    let clen = floor.chip.len();
-    let glen = floor.gen.len();
-
-    if clen > 0 && glen > 0 {
-        for c in floor.chip.iter() {
-            for g in floor.gen.iter() {
-                result.push(((c.clone(), Type::Chip), (g.clone(), Type::Gen)));
-            }
-        }
-
-        if clen > 1 {
-            for (idx, c1) in floor.chip.iter().take(clen - 1).enumerate() {
-                for c2 in floor.chip.iter().skip(idx + 1) {
-                    result.push(((c1.clone(), Type::Chip), (c2.clone(), Type::Chip)));
-                }
-            }
-        }
-
-        if glen > 1 {
-            for (idx, g1) in floor.gen.iter().take(glen - 1).enumerate() {
-                for g2 in floor.gen.iter().skip(idx + 1) {
-                    result.push(((g1.clone(), Type::Gen), (g2.clone(), Type::Gen)));
-                }
-            }
+    for i in 0..singles.len() - 1 {
+        for j in i + 1..singles.len() {
+            result.push((singles[i].clone(), singles[j].clone()));
         }
     }
 
@@ -399,36 +390,121 @@ fn calc_combinations(floor: &Floor) -> Vec<((Source, Type), (Source, Type))> {
 }
 
 fn map_hash(map: &Map) -> u64 {
-    let mut s = DefaultHasher::new();
-    map.hash(&mut s);
-    let hash = s.finish();
+    let mut hash: u64 = 0;
+
+    for floor in map {
+        hash <<= 16;
+        hash |= hash_floor(floor) as u64;
+    }
 
     hash
 }
 
-#[test]
-fn test_part1() {
-    let mut state = State {
-        floor: 0,
-        map: vec![Floor::new(), Floor::new(), Floor::new(), Floor::new()],
-        moves: 0,
-        last_moves: Vec::new(),
+fn hash_floor(floor: &Floor) -> u16 {
+    let mut pairs: u8 = 0;
+    let mut chips: u8 = 0;
+    let mut gens: u8 = 0;
+
+    for e in SOURCE_VEC.iter() {
+        let cbit = 1 << *e as u8;
+        let gbit = 1 << (GEN_SHIFT + *e as u8);
+
+        let cmask = floor.0 & cbit;
+        let gmask = floor.0 & gbit;
+
+        if cmask != 0{
+            if gmask != 0 {
+                pairs += 1;
+            } else {
+                chips += 1;
+            }
+        } else if gmask != 0 {
+            gens += 1;
+        }
+    }
+
+    ((pairs as u16) << 10) | ((chips as u16) << 5) | (gens as u16)
+}
+
+fn parts_to_object(src: &Source, typ: &Type) -> Object {
+    let shift = match typ {
+        Type::Chip => 0,
+        Type::Gen => GEN_SHIFT
     };
 
-    state.map[0].add(Source::Hydrogen, &Type::Chip);
-    state.map[0].add(Source::Lithium, &Type::Chip);
+    let bit = 1 << (shift + *src as u8);
 
-    state.map[1].add(Source::Hydrogen, &Type::Gen);
+    Object(bit)
+}
 
-    state.map[2].add(Source::Lithium, &Type::Gen);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let mut answer = Answer {
-        min_moves: usize::MAX,
-        moves: Vec::new(),
-        seen_states: HashMap::new()
-    };
+    #[test]
+    fn test_floor_valid()
+    {
+        let mut f;
+        
+        // Valid floors
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Chip).0);
+        assert!(floor_valid(&f));
 
-    next_move(&mut answer, &mut state);
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Gen).0);
+        assert!(floor_valid(&f));
 
-    println!("{} moves (test): {:?}", answer.min_moves, answer.moves);
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Gen).0 |
+                parts_to_object(&Source::Strontium, &Type::Chip).0);
+        assert!(floor_valid(&f));
+
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Gen).0 |
+                parts_to_object(&Source::Strontium, &Type::Chip).0 |
+                parts_to_object(&Source::Thulium, &Type::Gen).0);
+        assert!(floor_valid(&f));
+
+        // Invalid floors
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Chip).0 |
+                parts_to_object(&Source::Thulium, &Type::Gen).0 |
+                parts_to_object(&Source::Thulium, &Type::Chip).0);
+        assert!(!floor_valid(&f));
+
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Chip).0 |
+                parts_to_object(&Source::Thulium, &Type::Gen).0);
+        assert!(!floor_valid(&f));
+
+        f = Floor(parts_to_object(&Source::Strontium, &Type::Chip).0 |
+                parts_to_object(&Source::Thulium, &Type::Gen).0 |
+                parts_to_object(&Source::Thulium, &Type::Chip).0 |
+                parts_to_object(&Source::Curium, &Type::Gen).0);
+        assert!(!floor_valid(&f));
+    }
+
+    #[test]
+    fn test_part1() {
+        let mut state = State {
+            floor: 0,
+            map: vec![Floor(0), Floor(0), Floor(0), Floor(0)],
+            moves: 0,
+            last_moves: Vec::new(),
+        };
+
+        state.map[0].add_obj(Source::Strontium, Type::Chip);
+        state.map[0].add_obj(Source::Curium, Type::Chip);
+
+        state.map[1].add_obj(Source::Strontium, Type::Gen);
+
+        state.map[2].add_obj(Source::Curium, Type::Gen);
+
+        let mut answer = Answer {
+            min_moves: usize::MAX,
+            moves: Vec::new(),
+            seen_states: HashMap::new()
+        };
+
+        next_move(&mut answer, &mut state);
+
+        println!("{} moves (test): {:?}", answer.min_moves, answer.moves);
+
+        assert!(answer.min_moves == 11);
+    }
 }
