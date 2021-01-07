@@ -13,6 +13,11 @@ use std::{collections::HashMap, fmt};
 */
 
 fn main() {
+    part1();
+    part2();
+}
+
+fn part1() {
     // Initialise state
     let mut state = State {
         floor: 0,
@@ -47,7 +52,51 @@ fn main() {
 
     // Print results
     println!("{} moves (part 1)", answer.min_moves);
-    println!("Moved are: {:?}", answer.moves);
+    println!("Moves are: {:?}", answer.moves);
+}
+
+fn part2() {
+    // Initialise state
+    let mut state = State {
+        floor: 0,
+        map: vec![Floor(0), Floor(0), Floor(0), Floor(0)],
+        moves: 0,
+        last_moves: Vec::new(),
+    };
+
+    // Add objects (from input)
+    state.map[0].add_obj(Source::Strontium, Type::Gen);
+    state.map[0].add_obj(Source::Strontium, Type::Chip);
+    state.map[0].add_obj(Source::Plutonium, Type::Gen);
+    state.map[0].add_obj(Source::Plutonium, Type::Chip);
+
+    state.map[1].add_obj(Source::Thulium, Type::Gen);
+    state.map[1].add_obj(Source::Ruthenium, Type::Gen);
+    state.map[1].add_obj(Source::Ruthenium, Type::Chip);
+    state.map[1].add_obj(Source::Curium, Type::Gen);
+    state.map[1].add_obj(Source::Curium, Type::Chip);
+
+    state.map[2].add_obj(Source::Thulium, Type::Chip);
+
+    // Extra objects
+    state.map[0].add_obj(Source::Elerium, Type::Gen);
+    state.map[0].add_obj(Source::Elerium, Type::Chip);
+    state.map[0].add_obj(Source::Dilithium, Type::Gen);
+    state.map[0].add_obj(Source::Dilithium, Type::Chip);
+
+    // Initialise answer
+    let mut answer = Answer {
+        min_moves: usize::MAX,
+        moves: Vec::new(),
+        seen_states: HashMap::new()
+    };
+
+    // Make the next move (recursively)
+    next_move(&mut answer, &mut state);
+
+    // Print results
+    println!("{} moves (part 2)", answer.min_moves);
+    println!("Moves are: {:?}", answer.moves);
 }
 
 #[derive(Debug)]
@@ -65,11 +114,14 @@ enum Source {
     Thulium,
     Ruthenium,
     Curium,
+    Elerium,
+    Dilithium
 }
 
-const SOURCE_VEC: [Source; 5] = [Source::Strontium, Source::Plutonium, Source::Thulium, Source::Ruthenium, Source::Curium];
+const SOURCE_VEC: [Source; 7] = [Source::Strontium, Source::Plutonium, Source::Thulium, Source::Ruthenium,
+    Source::Curium, Source::Elerium, Source::Dilithium];
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct Floor(u16);
 
 impl Floor {
@@ -106,6 +158,16 @@ impl Floor {
     }
 }
 
+impl fmt::Debug for Floor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let obj = self.get_objects();
+        let list = obj.iter().map(|o| format!("{:?}", o)).collect::<Vec<String>>().join(", ");
+        f.write_fmt(format_args!("{}", list))
+    }
+}
+
+type Map = Vec<Floor>;
+
 #[derive(Clone)]
 struct Object(u16);
 
@@ -127,8 +189,6 @@ impl fmt::Debug for Object {
         f.write_fmt(format_args!("Invalid object: {}", self.0))
     }
 }
-
-type Map = Vec<Floor>;
 
 #[derive(Clone)]
 struct State {
@@ -259,7 +319,11 @@ fn next_move(answer: &mut Answer, state: &mut State) {
     }
     
     #[cfg(test)]
-    println!("Moves: {} {} {:?}", state.moves, state.floor, moves);
+    for (i, f) in state.map.iter().enumerate().rev() {
+        println!("{}: {:?}", i, f);
+    }
+    #[cfg(test)]
+    println!("movect={} floor={} moves={:?}", state.moves, state.floor, moves);
 
     for m in moves {
         let mut new_state = state.clone();
@@ -431,6 +495,9 @@ fn parts_to_object(src: &Source, typ: &Type) -> Object {
         Type::Chip => 0,
         Type::Gen => GEN_SHIFT
     };
+
+    #[cfg(debug_assertions)]
+    assert!((1 << *src as u8) < (1 << GEN_SHIFT));
 
     let bit = 1 << (shift + *src as u8);
 
