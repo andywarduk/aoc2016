@@ -1,4 +1,6 @@
-use std::{cmp::Ordering, collections::{BinaryHeap, HashMap, HashSet, VecDeque}};
+use std::{borrow::Cow, cmp::Ordering, collections::{BinaryHeap, HashMap, HashSet, VecDeque}, fs::File};
+
+use gif::{Encoder, Frame};
 
 mod map;
 
@@ -12,21 +14,21 @@ const START_Y: Coord = 1;
 const DEST_X: Coord = 31;
 const DEST_Y: Coord = 39;
 
+const GIF_MULT: u8 = 8;
+const GIF_DIM: u16 = MAP_DIM as u16 * GIF_MULT as u16;
+
 fn main() {
     let map = map::Map::generate(FAV_NUM, MAP_DIM as usize);
 
-    let work_state1 = shortest_path(&map, START_X, START_Y, DEST_X, DEST_Y);
+    let (steps, path) = shortest_path(&map, START_X, START_Y, DEST_X, DEST_Y);
 
-    println!("Shortest path to {}x{} is {} (part 1)", DEST_X, DEST_Y, work_state1.shortest_steps);
-    println!("Visits: {}", work_state1.visited.len());
-    println!("Path: {:?}", work_state1.shortest_path);
+    println!("Shortest path to {}x{} is {} (part 1)", DEST_X, DEST_Y, steps);
+    println!("Path: {:?}", path);
 
-    let work_state2 = walk_for(&map, START_X, START_Y, 50);
+    let visited = walk_for(&map, START_X, START_Y, 50);
 
-    println!("Locations visited is {} (part 2)", work_state2.visited.len());
+    println!("Locations visited is {} (part 2)", visited);
 }
-
-#[derive(Debug)]
 struct WorkState1<'a> {
     end_x: Coord,
     end_y: Coord,
@@ -34,7 +36,8 @@ struct WorkState1<'a> {
     shortest_path: Vec<(Coord, Coord)>,
     queue: BinaryHeap<State1>,
     map: &'a map::Map,
-    visited: HashMap<(Coord, Coord), Dist>
+    visited: HashMap<(Coord, Coord), Dist>,
+    gif_encoder: Encoder<&'a mut File>
 }
 
 impl<'a> WorkState1<'a> {
@@ -109,7 +112,12 @@ impl PartialEq for State1 {
 
 impl Eq for State1 {}
 
-fn shortest_path(map: &map::Map, sx: Coord, sy: Coord, dx: Coord, dy: Coord) -> WorkState1 {
+fn shortest_path(map: &map::Map, sx: Coord, sy: Coord, dx: Coord, dy: Coord) -> (Dist, Vec<(Coord, Coord)>) {
+    // Start GIF
+    let mut image = File::create("output13-1.gif").unwrap();
+    let color_map = &[0, 0, 0,  0xFF, 0xFF, 0xFF,  0xA0, 0x00, 0x00,  0x00, 0xA0, 0x00,  0xC0, 0xC0, 0x00];
+    let encoder = Encoder::new(&mut image, GIF_DIM, GIF_DIM, color_map).unwrap();
+    
     // Set up work state
     let mut work_state = WorkState1 {
         end_x: dx,
@@ -118,7 +126,8 @@ fn shortest_path(map: &map::Map, sx: Coord, sy: Coord, dx: Coord, dy: Coord) -> 
         shortest_path: Vec::new(),
         queue: BinaryHeap::new(),
         map,
-        visited: HashMap::new()
+        visited: HashMap::new(),
+        gif_encoder: encoder
     };
 
     // Add initial state
@@ -135,12 +144,15 @@ fn shortest_path(map: &map::Map, sx: Coord, sy: Coord, dx: Coord, dy: Coord) -> 
         next_moves(&mut work_state, next);
     }
 
-    work_state
+    (work_state.shortest_steps, work_state.shortest_path)
 }
 
 fn next_moves(work_state: &mut WorkState1, state: State1) {
     let x = state.x;
     let y = state.y;
+
+    // Draw GIF frame
+    draw_frame1(work_state, &state);
 
     // At destination?
     if state.x == work_state.end_x && state.y == work_state.end_y {
@@ -151,11 +163,11 @@ fn next_moves(work_state: &mut WorkState1, state: State1) {
         return
     }
 
-    // Already taken too may steps compared to shortest path?
+    // Already taken too many steps compared to shortest path?
     if state.steps >= work_state.shortest_steps {
         return
     }
-
+    
     // Already visited?
     if !work_state.set_visited(x, y, state.steps) {
         return
@@ -201,12 +213,42 @@ fn next_moves(work_state: &mut WorkState1, state: State1) {
     add_move(x as isize, y as isize + 1);
 }
 
-#[derive(Debug)]
+fn draw_frame1(work_state: &mut WorkState1, state: &State1) {
+    let mut frame_data: [u8; GIF_DIM as usize * GIF_DIM as usize] = [0; GIF_DIM as usize * GIF_DIM as usize];
+
+    // Draw the walls
+    work_state.map.draw_gif(&mut frame_data, GIF_MULT, GIF_DIM, 1);
+
+    // Draw visited in colour 2
+    for ((x, y), _) in &work_state.visited {
+        work_state.map.draw_block(*x, *y, 2, &mut frame_data, GIF_MULT, GIF_DIM);
+    }
+
+    // Draw current path in colour 3
+    for (x, y) in &state.path {
+        work_state.map.draw_block(*x, *y, 3, &mut frame_data, GIF_MULT, GIF_DIM);
+    }
+
+    // Draw queue in colour 4
+    for s in &work_state.queue {
+        work_state.map.draw_block(s.x, s.y, 4, &mut frame_data, GIF_MULT, GIF_DIM);
+    }
+    
+    // Write frame
+    let mut frame = Frame::default();
+    frame.delay = 3;
+    frame.width = GIF_DIM;
+    frame.height = GIF_DIM;
+    frame.buffer = Cow::Borrowed(&frame_data);
+    work_state.gif_encoder.write_frame(&frame).unwrap();
+}
+
 struct WorkState2<'a> {
     dist: Dist,
     queue: VecDeque<State2>,
     map: &'a map::Map,
-    visited: HashSet<(Coord, Coord)>
+    visited: HashSet<(Coord, Coord)>,
+    gif_encoder: Encoder<&'a mut File>
 }
 
 impl<'a> WorkState2<'a> {
@@ -226,13 +268,19 @@ struct State2 {
     y: Coord,
 }
 
-fn walk_for(map: &map::Map, sx: Coord, sy: Coord, dist: Dist) -> WorkState2 {
+fn walk_for(map: &map::Map, sx: Coord, sy: Coord, dist: Dist) -> usize {
+    // Start GIF
+    let mut image = File::create("output13-2.gif").unwrap();
+    let color_map = &[0, 0, 0,  0xFF, 0xFF, 0xFF,  0xA0, 0x00, 0x00,  0xC0, 0xC0, 0x00];
+    let encoder = Encoder::new(&mut image, GIF_DIM, GIF_DIM, color_map).unwrap();
+    
     // Set up work state
     let mut work_state = WorkState2 {
         dist,
         queue: VecDeque::new(),
         map,
-        visited: HashSet::new()
+        visited: HashSet::new(),
+        gif_encoder: encoder
     };
 
     // Add initial state
@@ -247,7 +295,7 @@ fn walk_for(map: &map::Map, sx: Coord, sy: Coord, dist: Dist) -> WorkState2 {
         walk(&mut work_state, next);
     }
     
-    work_state
+    work_state.visited.len()
 }
 
 fn walk(work_state: &mut WorkState2, state: State2) {
@@ -257,6 +305,9 @@ fn walk(work_state: &mut WorkState2, state: State2) {
     // Mark as visited
     work_state.set_visited(x, y);
     
+    // Draw GIF frame
+    draw_frame2(work_state);
+
     // Already taken too may steps compared to shortest path?
     if state.steps == work_state.dist {
         return
@@ -296,4 +347,29 @@ fn walk(work_state: &mut WorkState2, state: State2) {
     add_move(x as isize + 1, y as isize);
     add_move(x as isize, y as isize - 1);
     add_move(x as isize, y as isize + 1);
+}
+
+fn draw_frame2(work_state: &mut WorkState2) {
+    let mut frame_data: [u8; GIF_DIM as usize * GIF_DIM as usize] = [0; GIF_DIM as usize * GIF_DIM as usize];
+
+    // Draw the walls
+    work_state.map.draw_gif(&mut frame_data, GIF_MULT, GIF_DIM, 1);
+
+    // Draw visited in colour 2
+    for (x, y) in &work_state.visited {
+        work_state.map.draw_block(*x, *y, 2, &mut frame_data, GIF_MULT, GIF_DIM);
+    }
+
+    // Draw queue in colour 3
+    for s in &work_state.queue {
+        work_state.map.draw_block(s.x, s.y, 3, &mut frame_data, GIF_MULT, GIF_DIM);
+    }
+    
+    // Write frame
+    let mut frame = Frame::default();
+    frame.delay = 2;
+    frame.width = GIF_DIM;
+    frame.height = GIF_DIM;
+    frame.buffer = Cow::Borrowed(&frame_data);
+    work_state.gif_encoder.write_frame(&frame).unwrap();
 }

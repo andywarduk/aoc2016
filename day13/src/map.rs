@@ -42,6 +42,32 @@ impl Map {
             Block::Wall => false
         }
     }
+
+    pub fn draw_gif(&self, frame_data: &mut [u8], mult: u8, frame_width: u16, colour: u8) {
+        // Build frame
+        for y in 0..self.map.len() {
+            let row = &self.map[y];
+
+            for x in 0..row.len() {
+                match row[x] {
+                    Block::Wall => self.draw_block(x as u16, y as u16, colour, frame_data, mult, frame_width),
+                    _ => {}
+                }
+            }
+        }    
+    }
+
+    pub fn draw_block(&self, x: u16, y: u16, colour: u8, frame_data: &mut [u8], mult: u8, frame_width: u16) {
+        let gx_orgn = x as usize * mult as usize;
+        let gy_orgn = y as usize * mult as usize;
+
+        for gy in gy_orgn..gy_orgn + mult as usize {
+            let out_elem = (gy * frame_width as usize) + gx_orgn;
+            for i in 0..mult as usize {
+                frame_data[out_elem + i] = colour;
+            }
+        }
+    }
 }
 
 impl fmt::Debug for Map {
