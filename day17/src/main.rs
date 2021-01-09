@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+// Seed from input
 const SEED: &str = "gdjjyniy";
 
 const MAX_X: u8 = 3;
@@ -10,7 +11,7 @@ fn main() {
     println!("Shortest path (part 1): {}", shortest_path.unwrap());
 
     let longest_len = longest(SEED);
-    println!("Longest path (part 1): {}", longest_len);
+    println!("Longest path (part 2): {}", longest_len);
 }
 
 #[derive(Debug)]
