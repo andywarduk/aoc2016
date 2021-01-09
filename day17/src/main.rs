@@ -47,61 +47,12 @@ fn shortest(seed: &str) -> Option<String> {
             break
         }
 
-        // Calculate unlocked doors
-        let digest = md5::compute(format!("{}{}", seed, workitem.path));
-
-        // Calculate next states
-
-        // Down
-        if y < MAX_Y {
-            let d = (digest[0] & 0x0f) >= 0x0b;
-
-            if d {
-                workq.push_back(WorkItem {
-                    x,
-                    y: y + 1,
-                    path: add_path(&workitem.path, 'D')
-                });
-            }
-        }
-
-        // Right
-        if x < MAX_X {
-            let r = (digest[1] & 0x0f) >= 0x0b;
-
-            if r {
-                workq.push_back(WorkItem {
-                    x: x + 1,
-                    y,
-                    path: add_path(&workitem.path, 'R')
-                });
-            }
-        }
-
-        // Up
-        if y > 0 {
-            let u = (digest[0] >> 4) >= 0x0b;
-
-            if u {
-                workq.push_back(WorkItem {
-                    x,
-                    y: y - 1,
-                    path: add_path(&workitem.path, 'U')
-                });
-            }
-        }
-
-        // Left
-        if x > 0 {
-            let l = (digest[1] >> 4) >= 0x0b;
-
-            if l {
-                workq.push_back(WorkItem {
-                    x: x - 1,
-                    y,
-                    path: add_path(&workitem.path, 'L')
-                });
-            }
+        for m in get_moves(x, y, seed, &workitem.path) {
+            workq.push_back(WorkItem {
+                x: m.x,
+                y: m.y,
+                path: add_path(&workitem.path, m.dir)
+            });
         }
     }
 
@@ -126,46 +77,48 @@ fn longest_iterate(x: u8, y: u8, path: String, seed: &str, longest_len: &mut usi
         return
     }
 
+    for m in get_moves(x, y, seed, &path) {
+        longest_iterate(m.x, m.y, add_path(&path, m.dir), seed, longest_len);
+    }
+}
+
+struct Move {
+    x: u8,
+    y: u8,
+    dir: char
+}
+
+fn get_moves(x: u8, y: u8, seed: &str, path: &String) -> Vec<Move> {
+    let mut moves = Vec::with_capacity(4);
+
     // Calculate unlocked doors
     let digest = md5::compute(format!("{}{}", seed, path));
 
-    // Calculate next states
+    let unlocked = |byte, shift: u8| (digest[byte] >> shift ) & 0x0f >= 0x0b;
+
+    let mut add = |x, y, dir| moves.push(Move { x, y, dir });
 
     // Down
-    if y < MAX_Y {
-        let d = (digest[0] & 0x0f) >= 0x0b;
-
-        if d {
-            longest_iterate(x, y + 1, add_path(&path, 'D'), seed, longest_len);
-        }
+    if y < MAX_Y && unlocked(0, 0) {
+        add(x, y + 1, 'D')
     }
 
     // Right
-    if x < MAX_X {
-        let r = (digest[1] & 0x0f) >= 0x0b;
-
-        if r {
-            longest_iterate(x + 1, y, add_path(&path, 'R'), seed, longest_len);
-        }
+    if x < MAX_X && unlocked(1, 0) {
+        add(x + 1, y, 'R')
     }
 
     // Up
-    if y > 0 {
-        let u = (digest[0] >> 4) >= 0x0b;
-
-        if u {
-            longest_iterate(x, y - 1, add_path(&path, 'U'), seed, longest_len);
-        }
+    if y > 0 && unlocked(0, 4) {
+        add(x, y - 1, 'U')
     }
 
     // Left
-    if x > 0 {
-        let l = (digest[1] >> 4) >= 0x0b;
-
-        if l {
-            longest_iterate(x - 1, y, add_path(&path, 'L'), seed, longest_len);
-        }
+    if x > 0 && unlocked(1, 4) {
+        add(x - 1, y, 'L')
     }
+
+    moves
 }
 
 #[inline]
