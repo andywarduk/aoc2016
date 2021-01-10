@@ -10,12 +10,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let map = map::Map::parse(&lines);
 
-    part1(&map);
-
-    Ok(())
-}
-
-fn part1(map: &Map) {
     let gif_scale = 8;
     let gif_width = map.width() * gif_scale;
     let gif_height = map.height() * gif_scale;
@@ -46,10 +40,12 @@ fn part1(map: &Map) {
 
     println!("Shortest journey (part 1): {}", shortest);
 
-    // Calculate shortest rond trip
+    // Calculate shortest round trip
     let shortest = round_trip(&distances, &map);
 
     println!("Shortest round trip (part 2): {}", shortest);
+
+    Ok(())
 }
 
 #[derive(Debug)]
