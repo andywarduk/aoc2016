@@ -51,8 +51,8 @@ struct Range {
 }
 
 impl Range {
-    fn parse(line: &String) -> Range {
-        let mut split = line.split("-");
+    fn parse(line: &str) -> Range {
+        let mut split = line.split('-');
 
         Range {
             lo: split.next().unwrap().parse::<u32>().unwrap(),
@@ -61,8 +61,8 @@ impl Range {
     }
 }
 
-fn parse_ranges(lines: &Vec<String>) -> Vec<Range> {
-    let mut ranges: Vec<Range> = lines.iter().map(Range::parse).collect();
+fn parse_ranges(lines: &[String]) -> Vec<Range> {
+    let mut ranges: Vec<Range> = lines.iter().map(|s| Range::parse(s)).collect();
     
     ranges.sort();
 
@@ -89,7 +89,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }

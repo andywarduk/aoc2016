@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn part1(instructions: &Vec<Instruction>, input: &str) {
+fn part1(instructions: &[Instruction], input: &str) {
     let mut chars = input.chars().collect();
 
     for instr in instructions.iter() {
@@ -26,7 +26,7 @@ fn part1(instructions: &Vec<Instruction>, input: &str) {
     println!("Scrambled password (part 1): {}", string);
 }
 
-fn part2(instructions: &Vec<Instruction>, input: &str) {
+fn part2(instructions: &[Instruction], input: &str) {
     let mut chars = input.chars().collect();
 
     for instr in instructions.iter().rev() {
@@ -50,7 +50,7 @@ enum Instruction {
 }
 
 impl Instruction {
-    fn parse(line: &String) -> Instruction {
+    fn parse(line: &str) -> Instruction {
         let mut terms = line.split_whitespace();
 
         let usize_at = |terms: &mut SplitWhitespace, pos| {
@@ -88,9 +88,7 @@ impl Instruction {
         let mut new_chars = chars.clone();
 
         let swap_pos = |chars: &mut Vec<char>, p1, p2| {
-            let tmp = chars[p1];
-            chars[p1] = chars[p2];
-            chars[p2] = tmp;
+            chars.swap(p1, p2);
         };
 
         let find_char = |chars: &Vec<char>, find_c| {
@@ -122,9 +120,7 @@ impl Instruction {
         let reverse = |chars: &mut Vec<char>, mut p1, mut p2| {
             assert!(p1 < p2);
             while p1 < p2 {
-                let tmp = chars[p1];
-                chars[p1] = chars[p2];
-                chars[p2] = tmp;
+                chars.swap(p1, p2);
 
                 p1 += 1;
                 p2 -= 1;
@@ -194,12 +190,10 @@ impl Instruction {
                     } else {
                         rotate_r(&mut new_chars, *p1, *p2, 1);
                     }
+                } else if forwards {
+                    rotate_r(&mut new_chars, *p2, *p1, 1);
                 } else {
-                    if forwards {
-                        rotate_r(&mut new_chars, *p2, *p1, 1);
-                    } else {
-                        rotate_l(&mut new_chars, *p2, *p1, 1);
-                    }
+                    rotate_l(&mut new_chars, *p2, *p1, 1);
                 }
             }
         }
@@ -208,8 +202,8 @@ impl Instruction {
     }
 }
 
-fn parse_instructions(lines: &Vec<String>) -> Vec<Instruction> {
-    lines.iter().map(Instruction::parse).collect()
+fn parse_instructions(lines: &[String]) -> Vec<Instruction> {
+    lines.iter().map(|i| Instruction::parse(i)).collect()
 }
 
 fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -232,7 +226,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }
@@ -253,7 +247,7 @@ fn test_example() {
         "rotate based on position of letter d".to_string(),
     ];
 
-    let expected = vec![
+    let expected = [
         "ebcda",
         "edcba",
         "abcde",
@@ -342,7 +336,7 @@ fn test_reverse() {
         test(Instruction::RotateRightAmt(i));
     }
 
-    for i in 0..7 {
-        test(Instruction::RotateRightPos(testchars[i]));
+    for c in testchars.iter() {
+        test(Instruction::RotateRightPos(*c));
     }
 }

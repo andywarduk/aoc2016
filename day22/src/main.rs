@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn part1(servers: &Vec<Server>) {
+fn part1(servers: &[Server]) {
     let mut pairs: HashSet<String> = HashSet::new();
 
     for (a_idx, a) in servers.iter().enumerate() {
@@ -101,7 +101,7 @@ fn shortest_path(map: &Map, to: (u16, u16), avoid: (u16, u16)) -> Vec<(u16, u16)
     let mut queue = VecDeque::new();
 
     queue.push_back(State {
-        pos: map.empty.clone(),
+        pos: map.empty,
         path: Vec::new()
     });
 
@@ -114,31 +114,27 @@ fn shortest_path(map: &Map, to: (u16, u16), avoid: (u16, u16)) -> Vec<(u16, u16)
         }
 
         let mut move_to = |next: (u16, u16)| {
-            loop {
-                if next.0 == avoid.0 && next.1 == avoid.1 {
-                    break
-                }
-
-                if visited.get(&next).is_some() {
-                    break
-                }
-
-                visited.insert(next.clone());
-
-                if !map.valid_move(&next, &(work_item.pos.0, work_item.pos.1)) {
-                    break
-                }
-
-                let mut new_path = work_item.path.clone();
-                new_path.push(next);
-
-                queue.push_back(State {
-                    pos: next,
-                    path: new_path
-                });
-                
-                break
+            if next.0 == avoid.0 && next.1 == avoid.1 {
+                return
             }
+
+            if visited.get(&next).is_some() {
+                return
+            }
+
+            visited.insert(next);
+
+            if !map.valid_move(&next, &(work_item.pos.0, work_item.pos.1)) {
+                return
+            }
+
+            let mut new_path = work_item.path.clone();
+            new_path.push(next);
+
+            queue.push_back(State {
+                pos: next,
+                path: new_path
+            });
         };
 
         if work_item.pos.0 > 0 {
@@ -167,14 +163,14 @@ struct Server {
 }
 
 impl Server {
-    fn parse(line: &String) -> Server {
+    fn parse(line: &str) -> Server {
         let mut terms = line.split_whitespace();
 
         let dev = terms.next().unwrap();
         let size_s = terms.next().unwrap();
         let used_s = terms.next().unwrap();
 
-        let mut dev_split = dev.split("-");
+        let mut dev_split = dev.split('-');
         let xs = dev_split.nth(1).unwrap();
         let ys = dev_split.next().unwrap();
 
@@ -226,12 +222,7 @@ impl Map {
 
     fn draw(&self, encoder: &mut Encoder<&mut File>, gif_w: u16, gif_h: u16, square: u16, border: u16) {
         let frame_size = gif_w as usize * gif_h as usize;
-        let mut frame_data = Vec::with_capacity(frame_size);
-
-        // Blank frame
-        for _ in 0..frame_size {
-            frame_data.push(0);
-        }
+        let mut frame_data = vec![0; frame_size];
 
         let draw_rect = |frame_data: &mut Vec<u8>, x, y, sx, sy, colour| {
             for sy in 0..sy {
@@ -262,14 +253,11 @@ impl Map {
             }
         };
 
-        let mut y = 0;
+        for (y, row) in self.map.iter().enumerate() {
+            let outy = border + (y as u16 * (square + border));
 
-        for row in &self.map {
-            let outy = border + (y * (square + border));
-            let mut x = 0;
-
-            for server in row {
-                let outx = border + (x * (square + border));
+            for (x, server) in row.iter().enumerate() {
+                let outx = border + (x as u16 * (square + border));
 
                 let size_size = square_size(server.size);
                 let offset = (square - size_size) / 2;
@@ -277,19 +265,18 @@ impl Map {
                 draw_box(&mut frame_data, outx + offset - 1, outy + offset - 1, size_size + 1, size_size + 1, 3);
                 draw_rect(&mut frame_data, outx + offset, outy + offset, size_size, size_size, 1);
                 draw_rect(&mut frame_data, outx + offset, outy + offset, (server.used * size_size) / server.size, size_size, 2);
-
-                x += 1;
             }
-
-            y += 1;
         }
 
         // Write frame
-        let mut frame = Frame::default();
-        frame.delay = 10;
-        frame.width = gif_w;
-        frame.height = gif_h;
-        frame.buffer = Cow::Borrowed(&frame_data);
+        let frame = Frame {
+            delay: 10,
+            width: gif_w,
+            height: gif_h,
+            buffer: Cow::Borrowed(&frame_data),
+            ..Frame::default()
+        };
+
         encoder.write_frame(&frame).unwrap();    
     }
 }
@@ -324,8 +311,8 @@ fn square_size(val: u16) -> u16 {
     root.ceil() as u16
 }
 
-fn parse_servers(lines: &Vec<String>) -> Vec<Server> {
-    lines.iter().map(Server::parse).collect()
+fn parse_servers(lines: &[String]) -> Vec<Server> {
+    lines.iter().map(|s| Server::parse(s)).collect()
 }
 
 fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {

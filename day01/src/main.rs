@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (turn, length) in directions {
         match turn {
             'L' => {
-                direction = direction - 90;
+                direction -= 90;
                 if direction < 0 { direction += 360 }
             }
             'R' => direction = (direction + 90) % 360,
@@ -34,10 +34,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             x += xadd;
             y += yadd;
 
-            if !visited.insert(format!("{}x{}", x, y)) {
-                if first_double == None {
-                    first_double = Some((x, y))
-                }
+            if !visited.insert(format!("{}x{}", x, y)) && first_double.is_none() {
+                first_double = Some((x, y))
             }
         }
     }
@@ -71,7 +69,7 @@ fn load_input(file: &str) -> Result<Vec<Direction>, Box<dyn std::error::Error>> 
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             let directions: Vec<(char, u8)> = line.split(", ").map(|d| {
                 (d.chars().next().unwrap(), d[1..].parse::<u8>().unwrap())
             }).collect();

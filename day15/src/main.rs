@@ -38,9 +38,9 @@ impl fmt::Debug for ModEqn {
     }
 }
 
-fn solve(eqns_in: &Vec<ModEqn>, debug: bool) -> u64 {
+fn solve(eqns_in: &[ModEqn], debug: bool) -> u64 {
     // Sort by a descending
-    let mut eqns = eqns_in.clone();
+    let mut eqns = eqns_in.to_vec();
 
     eqns.sort_by(|e1, e2| {
         e2.a.cmp(&e1.a)
@@ -49,21 +49,21 @@ fn solve(eqns_in: &Vec<ModEqn>, debug: bool) -> u64 {
     let mut result = eqns[0].a;
     let mut last_eqn = eqns[0].clone();
 
-    for i in 1..eqns.len() {
+    for eqn in eqns {
         if debug {
-            println!("Calculating {:?} and {:?}", last_eqn, eqns[i]);
+            println!("Calculating {:?} and {:?}", last_eqn, eqn);
         }
 
         loop {
-            let remain = result % eqns[i].n;
+            let remain = result % eqn.n;
 
             if debug {
-                println!("{} mod {} = {}", result, eqns[i].n, remain);
+                println!("{} mod {} = {}", result, eqn.n, remain);
             }
 
-            if remain == eqns[i].a {
+            if remain == eqn.a {
                 // Found solution
-                last_eqn = ModEqn { a: remain, n: last_eqn.n * eqns[i].n };
+                last_eqn = ModEqn { a: remain, n: last_eqn.n * eqn.n };
                 break
             } else {
                 // Try next
@@ -83,7 +83,7 @@ fn parse_equations(lines: &Vec<String>) -> Vec<ModEqn> {
         let mut terms = l.split_whitespace();
 
         let positions = terms.nth(3).unwrap().parse::<u64>().unwrap();
-        let startpos = terms.nth(7).unwrap().split(".").next().unwrap().parse::<u64>().unwrap();
+        let startpos = terms.nth(7).unwrap().split('.').next().unwrap().parse::<u64>().unwrap();
 
         time += 1;
 
@@ -124,7 +124,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }

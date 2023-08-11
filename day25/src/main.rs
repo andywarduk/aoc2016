@@ -55,12 +55,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Success?
-        match state.signal_state {
-            SignalState::Perfect => {
-                println!("Value of register 'a' to generate clock signal: {}", init_a);
-                break
-            },
-            _ => {}
+        if let SignalState::Perfect = state.signal_state {
+            println!("Value of register 'a' to generate clock signal: {}", init_a);
+            break
         }
     }
 
@@ -132,7 +129,7 @@ impl RegImm {
 impl fmt::Debug for RegImm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RegImm::Reg(r) => f.write_fmt(format_args!("{}", (*r + 'a' as u8) as char))?,
+            RegImm::Reg(r) => f.write_fmt(format_args!("{}", (*r + b'a') as char))?,
             RegImm::Imm(i) => f.write_fmt(format_args!("{}", *i))?
         }
         Ok(())
@@ -145,7 +142,7 @@ fn step(state: &mut State, program: &mut Program) {
     match &program[state.pc as usize] {
         Instruction::Cpy(ri1, ri2) => {
             match ri2 {
-                RegImm::Reg(r) => state.reg[*r as usize] = ri1.get(&state),
+                RegImm::Reg(r) => state.reg[*r as usize] = ri1.get(state),
                 RegImm::Imm(_) => {}
             }
         }
@@ -162,12 +159,12 @@ fn step(state: &mut State, program: &mut Program) {
             }
         }
         Instruction::Jnz(ri1, ri2) => {
-            if ri1.get(&state) != 0 {
-                state.pc += ri2.get(&state) - 1;
+            if ri1.get(state) != 0 {
+                state.pc += ri2.get(state) - 1;
             }
         }
         Instruction::Tgl(ri) => {
-            let ins_s = state.pc + ri.get(&state);
+            let ins_s = state.pc + ri.get(state);
 
             if ins_s >=0 && ins_s < program.len() as i32 {
                 let ins = ins_s as usize;
@@ -185,7 +182,7 @@ fn step(state: &mut State, program: &mut Program) {
             }
         }
         Instruction::Out(ri) => {
-            let value = ri.get(&state);
+            let value = ri.get(state);
             (state.output)(state, value);
         }
     }
@@ -245,7 +242,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }

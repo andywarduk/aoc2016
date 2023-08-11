@@ -70,7 +70,7 @@ fn run(state: &mut State, program: &Program) {
     while state.pc >= 0 && (state.pc as usize) < program.len() {
         match &program[state.pc as usize] {
             Instruction::Cpy(ri, Reg(r)) => {
-                state.reg[*r as usize] = ri.get(&state);
+                state.reg[*r as usize] = ri.get(state);
             }
             Instruction::Inc(Reg(r)) => {
                 state.reg[*r as usize] += 1;
@@ -79,7 +79,7 @@ fn run(state: &mut State, program: &Program) {
                 state.reg[*r as usize] -= 1;
             }
             Instruction::Jnz(ri, i) => {
-                if ri.get(&state) != 0 {
+                if ri.get(state) != 0 {
                     state.pc += i - 1;
                 }
             }
@@ -141,7 +141,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }

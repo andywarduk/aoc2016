@@ -45,16 +45,13 @@ impl Map {
 
     pub fn draw_gif(&self, frame_data: &mut [u8], mult: u8, frame_width: u16, colour: u8) {
         // Build frame
-        for y in 0..self.map.len() {
-            let row = &self.map[y];
-
-            for x in 0..row.len() {
-                match row[x] {
-                    Block::Wall => self.draw_block(x as u16, y as u16, colour, frame_data, mult, frame_width),
-                    _ => {}
+        for (y, row) in self.map.iter().enumerate() {
+            for (x, cell) in row.iter().enumerate() {
+                if let Block::Wall = *cell {
+                    self.draw_block(x as u16, y as u16, colour, frame_data, mult, frame_width)
                 }
             }
-        }    
+        }
     }
 
     pub fn draw_block(&self, x: u16, y: u16, colour: u8, frame_data: &mut [u8], mult: u8, frame_width: u16) {

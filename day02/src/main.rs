@@ -61,7 +61,7 @@ fn part2(directions: &Vec<Vec<char>>) {
                 _ => panic!("Unrecognised direction {}", dir)
             };
 
-            if newx < 0 || newx > 4 || newy < 0 || newy > 4 {
+            if !(0..=4).contains(&newx) || !(0..=4).contains(&newy) {
                 continue
             }
 
@@ -99,7 +99,7 @@ fn load_input(file: &str) -> Result<Vec<Vec<char>>, Box<dyn std::error::Error>> 
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             directions.push(line.chars().collect());
         }
     }

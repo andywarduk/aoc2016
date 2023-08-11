@@ -71,11 +71,7 @@ fn test_winner_opposite() {
 
 #[cfg(test)]
 fn winner(elves: usize) -> usize {
-    let mut presents = Vec::new();
-
-    for _ in 0..elves {
-        presents.push(1);
-    }
+    let mut presents = vec![1; elves];
 
     let mut turn = 0;
 

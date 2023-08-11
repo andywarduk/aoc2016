@@ -357,14 +357,12 @@ impl State {
     }
 
     fn make_move(&mut self, mv: Move) -> bool {
-        let new_floor;
-
         // Calculate new floor
-        match mv {
+        let new_floor = match mv {
             Move::One(dir, _) | Move::Two(dir, _, _) => {
-                new_floor = (self.floor as isize + dir as isize) as usize;
+                (self.floor as isize + dir as isize) as usize
             }
-        }
+        };
 
         // Move out
         self.move_out(self.floor, &mv);
@@ -511,12 +509,8 @@ impl Default for Answer {
 fn process(answer: &mut Answer, state: State) {
     answer.workq.push(state);
 
-    loop {
-        if let Some(state) = answer.workq.pop() {
-            next_move(answer, state);
-        } else {
-            break
-        }
+    while let Some(state) = answer.workq.pop() {
+        next_move(answer, state);
     }
 }
 
@@ -547,7 +541,7 @@ fn next_move(answer: &mut Answer, state: State) {
         #[cfg(test)]
         println!("Adding hash {:?} ({} moves)", hash, state.moves);
 
-        if answer.seen_states.insert(hash.clone(), state.moves) != None {
+        if answer.seen_states.insert(hash.clone(), state.moves).is_some() {
             panic!("seen_state insertion error");
         }
     }

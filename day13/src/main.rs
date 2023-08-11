@@ -15,7 +15,7 @@ const DEST_X: Coord = 31;
 const DEST_Y: Coord = 39;
 
 const GIF_MULT: u8 = 8;
-const GIF_DIM: u16 = MAP_DIM as u16 * GIF_MULT as u16;
+const GIF_DIM: u16 = MAP_DIM * GIF_MULT as u16;
 
 fn main() {
     let map = map::Map::generate(FAV_NUM, MAP_DIM as usize);
@@ -43,11 +43,7 @@ struct WorkState1<'a> {
 impl<'a> WorkState1<'a> {
     fn have_visited(&self, x: Coord, y: Coord, steps: Dist) -> bool {
         if let Some(d) = self.visited.get(&(x, y)) {
-            if *d > steps {
-                false
-            } else {
-                true
-            }
+            *d <= steps
         } else {
             false
         }
@@ -71,7 +67,7 @@ impl<'a> WorkState1<'a> {
         let xd = (self.end_x as f32 - x as f32).abs();
         let yd =  (self.end_y as f32 - y as f32).abs();
 
-        return ((xd * xd) + (yd * yd)).sqrt() as Dist
+        ((xd * xd) + (yd * yd)).sqrt() as Dist
     }
 }
 
@@ -175,36 +171,32 @@ fn next_moves(work_state: &mut WorkState1, state: State1) {
 
     // Add moves
     let mut add_move = |ix: isize, iy: isize| {
-        loop {
-            if ix < 0 || iy < 0 {
-                break
-            }
-
-            let x = ix as Coord;
-            let y = iy as Coord;
-
-            if !work_state.map.movable(x as usize, y as usize) {
-                break
-            }
-
-            if work_state.have_visited(x, y, state.steps) {
-                break
-            }
-
-            let mut new_state = State1 {
-                x,
-                y,
-                steps: state.steps + 1,
-                path: state.path.clone(),
-                dist: work_state.distance_to(x, y)
-            };
-
-            new_state.path.push((x, y));
-
-            work_state.queue.push(new_state);
-
-            break
+        if ix < 0 || iy < 0 {
+            return
         }
+
+        let x = ix as Coord;
+        let y = iy as Coord;
+
+        if !work_state.map.movable(x as usize, y as usize) {
+            return
+        }
+
+        if work_state.have_visited(x, y, state.steps) {
+            return
+        }
+
+        let mut new_state = State1 {
+            x,
+            y,
+            steps: state.steps + 1,
+            path: state.path.clone(),
+            dist: work_state.distance_to(x, y)
+        };
+
+        new_state.path.push((x, y));
+
+        work_state.queue.push(new_state);
     };
 
     add_move(x as isize - 1 , y as isize);
@@ -220,7 +212,7 @@ fn draw_frame1(work_state: &mut WorkState1, state: &State1) {
     work_state.map.draw_gif(&mut frame_data, GIF_MULT, GIF_DIM, 1);
 
     // Draw visited in colour 2
-    for ((x, y), _) in &work_state.visited {
+    for (x, y) in work_state.visited.keys() {
         work_state.map.draw_block(*x, *y, 2, &mut frame_data, GIF_MULT, GIF_DIM);
     }
 
@@ -235,11 +227,14 @@ fn draw_frame1(work_state: &mut WorkState1, state: &State1) {
     }
     
     // Write frame
-    let mut frame = Frame::default();
-    frame.delay = 3;
-    frame.width = GIF_DIM;
-    frame.height = GIF_DIM;
-    frame.buffer = Cow::Borrowed(&frame_data);
+    let frame = Frame {
+        delay: 3,
+        width: GIF_DIM,
+        height: GIF_DIM,
+        buffer: Cow::Borrowed(&frame_data),
+        ..Frame::default()
+    };
+
     work_state.gif_encoder.write_frame(&frame).unwrap();
 }
 
@@ -315,32 +310,28 @@ fn walk(work_state: &mut WorkState2, state: State2) {
 
     // Add moves
     let mut add_move = |ix: isize, iy: isize| {
-        loop {
-            if ix < 0 || iy < 0 {
-                break
-            }
-
-            let x = ix as Coord;
-            let y = iy as Coord;
-
-            if !work_state.map.movable(x as usize, y as usize) {
-                break
-            }
-
-            if work_state.have_visited(x, y) {
-                break
-            }
-
-            let new_state = State2 {
-                x,
-                y,
-                steps: state.steps + 1,
-            };
-
-            work_state.queue.push_back(new_state);
-
-            break
+        if ix < 0 || iy < 0 {
+            return
         }
+
+        let x = ix as Coord;
+        let y = iy as Coord;
+
+        if !work_state.map.movable(x as usize, y as usize) {
+            return
+        }
+
+        if work_state.have_visited(x, y) {
+            return
+        }
+
+        let new_state = State2 {
+            x,
+            y,
+            steps: state.steps + 1,
+        };
+
+        work_state.queue.push_back(new_state);
     };
 
     add_move(x as isize - 1 , y as isize);
@@ -366,10 +357,13 @@ fn draw_frame2(work_state: &mut WorkState2) {
     }
     
     // Write frame
-    let mut frame = Frame::default();
-    frame.delay = 2;
-    frame.width = GIF_DIM;
-    frame.height = GIF_DIM;
-    frame.buffer = Cow::Borrowed(&frame_data);
+    let frame = Frame {
+        delay: 2,
+        width: GIF_DIM,
+        height: GIF_DIM,
+        buffer: Cow::Borrowed(&frame_data),
+        ..Frame::default()
+    };
+
     work_state.gif_encoder.write_frame(&frame).unwrap();
 }

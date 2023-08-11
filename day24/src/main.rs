@@ -25,11 +25,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     map.draw(&mut frame_data, gif_width, gif_scale, 0, 1, 2);
 
     // Write frame
-    let mut frame = Frame::default();
-    frame.delay = 3;
-    frame.width = gif_width;
-    frame.height = gif_height;
-    frame.buffer = Cow::Borrowed(&frame_data);
+    let frame = Frame {
+        delay: 3,
+        width: gif_width,
+        height: gif_height,
+        buffer: Cow::Borrowed(&frame_data),
+        ..Frame::default()
+    };
+
     encoder.write_frame(&frame).unwrap();
 
     // Calculate distances between map items
@@ -129,24 +132,20 @@ fn walk_from(start_item: u8, start_pos: &Coord, map: &Map, distances: &mut Dista
         }
 
         let mut move_to = |next: Coord| {
-            loop {
-                if visited.get(&next).is_some() {
-                    break
-                }
-
-                visited.insert(next.clone());
-
-                if !map.valid_move(&next) {
-                    break
-                }
-
-                queue.push_back(State {
-                    pos: next,
-                    steps: work_item.steps + 1
-                });
-                
-                break
+            if visited.get(&next).is_some() {
+                return
             }
+
+            visited.insert(next.clone());
+
+            if !map.valid_move(&next) {
+                return
+            }
+
+            queue.push_back(State {
+                pos: next,
+                steps: work_item.steps + 1
+            });
         };
 
         move_to(work_item.pos.new_relative(-1, 0));
@@ -180,7 +179,7 @@ fn journey_iter(distances: &Distances, last_node: u8,  nodes: Vec<u8>, dist: u16
         // Calculate new distance (current distance plus distance of this leg)
         let new_dist = dist + distances.lookup(last_node, *n);
 
-        if new_nodes.len() == 0 {
+        if new_nodes.is_empty() {
             // No more nodes - check against current optimal distance
             if new_dist < *opt_dist {
                 // New optimal distance
@@ -217,7 +216,7 @@ fn round_trip_iter(distances: &Distances, last_node: u8,  nodes: Vec<u8>, dist: 
         // Calculate new distance (current distance plus distance of this leg)
         let mut new_dist = dist + distances.lookup(last_node, *n);
 
-        if new_nodes.len() == 0 {
+        if new_nodes.is_empty() {
             // No more nodes - travel back to the start
             new_dist += distances.lookup(*n, 0);
 
@@ -253,7 +252,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }

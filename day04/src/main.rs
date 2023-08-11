@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let answer2 = part2(rooms);
 
-    println!("");
+    println!();
     println!("Sector sum for valid rooms (part 1): {}", answer1);
     println!("North pole object storage sector (part 2): {}", answer2);
 
@@ -69,7 +69,7 @@ fn part2(rooms: Vec<RoomId>) -> u16 {
             } else {
                 let mut letter = c as u16 - 'a' as u16;
                 letter = (letter + r.sector) % 26;
-                (letter as u8 + 'a' as u8) as char
+                (letter as u8 + b'a') as char
             }
         }).collect();
 
@@ -109,7 +109,7 @@ fn load_input(file: &str) -> Result<Vec<RoomId>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             let last_dash = line.rfind('-').unwrap();
             let bracket = line.rfind('[').unwrap();
 

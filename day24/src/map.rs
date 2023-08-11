@@ -35,7 +35,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn parse(lines: &Vec<String>) -> Map {
+    pub fn parse(lines: &[String]) -> Map {
         let mut map: Map = Default::default();
 
         for (y, l) in lines.iter().enumerate() {
@@ -43,7 +43,7 @@ impl Map {
                 '.' => Block::Space,
                 '#' => Block::Wall,
                 _ => {
-                    let item = c as u8 - '0' as u8;
+                    let item = c as u8 - b'0';
 
                     map.items.insert(item, Coord::new(x, y));
                     map.item_pos.insert(Coord::new(x, y), item);
@@ -91,7 +91,7 @@ impl Map {
         }
 
         // Draw items
-        for (_, pos) in &self.items {
+        for (_, pos) in self.items.iter() {
             draw_block(pos.x, pos.y, item_colour);
         }
     }
@@ -105,10 +105,7 @@ impl Map {
     }
 
     pub fn valid_move(&self, pos: &Coord) -> bool {
-        match self.map[pos.y][pos.x] {
-            Block::Space => true,
-            _ => false
-        }
+        matches!(self.map[pos.y][pos.x], Block::Space)
     }
 
     pub fn items(&self) -> &BTreeMap<u8, Coord> {

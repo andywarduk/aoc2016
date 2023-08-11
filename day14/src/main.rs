@@ -1,4 +1,4 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 const KEY: &str = "cuanljph";
 
@@ -166,5 +166,5 @@ fn test_example() {
 #[test]
 fn test_stretched_md5() {
     let dstr = stretched_md5("abc", 0);
-    assert!(dstr == "a107ff634856bb300138cac6568c0f24".to_string());
+    assert!(dstr == "a107ff634856bb300138cac6568c0f24");
 }

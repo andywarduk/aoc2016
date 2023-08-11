@@ -22,13 +22,13 @@ fn part1(triangles: &Vec<Vec<u16>>) {
     println!("{} valid triangles (part 1)", valid);
 }
 
-fn part2(triangles: &Vec<Vec<u16>>) {
+fn part2(triangles: &[Vec<u16>]) {
     let mut valid: u16 = 0;
     let mut ti = triangles.iter();
 
     loop {
         let t1 = ti.next();
-        if t1 == None {
+        if t1.is_none() {
             break
         }
 
@@ -53,11 +53,7 @@ fn part2(triangles: &Vec<Vec<u16>>) {
 }
 
 fn triangle_valid(s1: u16, s2: u16, s3: u16) -> bool {
-    if s1 + s2 > s3 && s1 + s3 > s2 && s2 + s3 > s1 {
-        true 
-    } else {
-        false
-    }
+    s1 + s2 > s3 && s1 + s3 > s2 && s2 + s3 > s1
 }
 
 fn load_input(file: &str) -> Result<Vec<Vec<u16>>, Box<dyn std::error::Error>> {
@@ -80,7 +76,7 @@ fn load_input(file: &str) -> Result<Vec<Vec<u16>>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             triangles.push(line.split_whitespace().map(|ls| ls.parse::<u16>().unwrap()).collect());
         }
     }

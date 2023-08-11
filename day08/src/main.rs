@@ -44,7 +44,7 @@ fn process(commands: &Vec<Command>) {
 
     println!("{} pixels lit (part 1)", count_lit(&board));
 
-    println!("");
+    println!();
 
     dump_board(&board);
 }
@@ -57,7 +57,7 @@ fn rect(board: &mut Board, encoder: &mut Encoder<&mut File>, w: u8, h: u8) {
     }
 
     // Write GIF frame
-    write_gif_board(&board, encoder);
+    write_gif_board(board, encoder);
 }
 
 fn rot_row_by(board: &mut Board, encoder: &mut Encoder<&mut File>, y: u8, shift: u8) {
@@ -65,7 +65,7 @@ fn rot_row_by(board: &mut Board, encoder: &mut Encoder<&mut File>, y: u8, shift:
         rot_row(board, y);
 
         // Write GIF frame
-        write_gif_board(&board, encoder);
+        write_gif_board(board, encoder);
     }
 }
 
@@ -84,7 +84,7 @@ fn rot_col_by(board: &mut Board, encoder: &mut Encoder<&mut File>, x: u8, shift:
         rot_col(board, x);
 
         // Write GIF frame
-        write_gif_board(&board, encoder);
+        write_gif_board(board, encoder);
     }
 }
 
@@ -120,9 +120,9 @@ fn write_gif_board(board: &Board, encoder: &mut Encoder<&mut File>) {
     let mut frame_data: [u8; (GIF_W * GIF_H) as usize] = [0; (GIF_W * GIF_H) as usize];
 
     // Build frame
-    for y in 0..ROWS {
-        for x in 0..COLS {
-            if board[y][x] == '#' {
+    for (y, row) in board.iter().enumerate() {
+        for (x, cell) in row.iter().enumerate() {
+            if *cell == '#' {
                 let gx_orgn = x * GIF_MULT as usize;
                 let gy_orgn = y * GIF_MULT as usize;
 
@@ -137,11 +137,14 @@ fn write_gif_board(board: &Board, encoder: &mut Encoder<&mut File>) {
     }
 
     // Write frame
-    let mut frame = Frame::default();
-    frame.delay = 3;
-    frame.width = GIF_W;
-    frame.height = GIF_H;
-    frame.buffer = Cow::Borrowed(&frame_data);
+    let frame = Frame {
+        delay: 3,
+        width: GIF_W,
+        height: GIF_H,
+        buffer: Cow::Borrowed(&frame_data),
+        ..Frame::default()
+    };
+
     encoder.write_frame(&frame).unwrap();
 }
 
@@ -160,7 +163,7 @@ fn parse_commands(lines: Vec<String>) -> Vec<Command> {
 
         match terms.next().unwrap() {
             "rect" => {
-                let mut dims = terms.next().unwrap().split("x");
+                let mut dims = terms.next().unwrap().split('x');
                 let w = dims.next().unwrap().parse::<u8>().unwrap();
                 let h = dims.next().unwrap().parse::<u8>().unwrap();
 
@@ -170,12 +173,12 @@ fn parse_commands(lines: Vec<String>) -> Vec<Command> {
                 match terms.next().unwrap() {
                     "row" => {
                         let y = terms.next().unwrap()[2..].parse::<u8>().unwrap();
-                        let shift = terms.skip(1).next().unwrap().parse::<u8>().unwrap();
+                        let shift = terms.nth(1).unwrap().parse::<u8>().unwrap();
                         commands.push(Command::RotRow(y, shift));
                     }
                     "column" => {
                         let x = terms.next().unwrap()[2..].parse::<u8>().unwrap();
-                        let shift = terms.skip(1).next().unwrap().parse::<u8>().unwrap();
+                        let shift = terms.nth(1).unwrap().parse::<u8>().unwrap();
                         commands.push(Command::RotCol(x, shift));
                     }
                     _ => panic!("Unrecognised command {}", l)
@@ -208,7 +211,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }

@@ -17,9 +17,9 @@ fn part1() {
             let charnum = digest[2] & 0x0f;
 
             let c = if charnum < 0xa {
-                (charnum + '0' as u8) as char
+                (charnum + b'0') as char
             } else {
-                ((charnum - 10) + 'a' as u8) as char
+                ((charnum - 10) + b'a') as char
             };
 
             println!("Password character {} from seed {} is {}", chars.len() + 1, n, c);
@@ -53,9 +53,9 @@ fn part2() {
             let charnum = (digest[3] & 0xf0) >> 4;
 
             let c = if charnum < 0xa {
-                (charnum + '0' as u8) as char
+                (charnum + b'0') as char
             } else {
-                ((charnum - 10) + 'a' as u8) as char
+                ((charnum - 10) + b'a') as char
             };
 
             println!("Password character {} from seed {} is {}", charpos, n, c);

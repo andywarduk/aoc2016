@@ -30,8 +30,8 @@ fn mutate(pattern: &mut Vec<bool>) {
     }
 }
 
-fn checksum(pattern: &Vec<bool>) -> Vec<bool> {
-    let mut last = pattern.clone();
+fn checksum(pattern: &[bool]) -> Vec<bool> {
+    let mut last = pattern.to_vec();
     let mut checksum = Vec::new();
 
     loop {
@@ -62,7 +62,7 @@ fn pattern_from_string(string: &str) -> Vec<bool> {
     }).collect()
 }
 
-fn pattern_to_string(vec: &Vec<bool>) -> String {
+fn pattern_to_string(vec: &[bool]) -> String {
     vec.iter().map(|b| {
         if *b { '1' } else { '0' }
     }).collect::<String>()
@@ -74,7 +74,7 @@ fn test_process() {
         let mut pattern = pattern_from_string(before);
         mutate(&mut pattern);
         let string = pattern_to_string(&pattern);
-        assert!(string == after.to_string());
+        assert!(string == after);
     }
 
     test("1", "100");

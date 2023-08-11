@@ -51,7 +51,7 @@ fn uncompressed_section_len(compressed_chars: &Vec<char>, part: u8, start: usize
     uncompressed_chars
 }
 
-fn get_compression_details(compressed_chars: &Vec<char>, start: usize) -> (usize, usize, usize) {
+fn get_compression_details(compressed_chars: &[char], start: usize) -> (usize, usize, usize) {
     let end;
     let mut ex = 0;
 
@@ -94,7 +94,7 @@ fn load_input(file: &str) -> Result<String, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             return Ok(line);
         }
     }

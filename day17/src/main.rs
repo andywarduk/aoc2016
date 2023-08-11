@@ -41,7 +41,7 @@ fn shortest(seed: &str) -> Option<String> {
 
         if x == MAX_X && y == MAX_Y {
             // Got solution
-            if shortest_path == None {
+            if shortest_path.is_none() {
                 shortest_path = Some(workitem.path.clone());
             }
 

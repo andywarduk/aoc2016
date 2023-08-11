@@ -9,10 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for a in addresses {
         let elems: Vec<&str> = a.split(|c| {
-            match c {
-                '[' | ']' => true,
-                _ => false
-            }
+            matches!(c, '[' | ']')
         }).collect();
     
         if address_supports_tls(&elems) {
@@ -30,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn address_supports_tls(elems: &Vec<&str>) -> bool {
+fn address_supports_tls(elems: &[&str]) -> bool {
     let mut result = false;
 
     for (idx, e) in elems.iter().enumerate() {
@@ -50,7 +47,7 @@ fn address_supports_tls(elems: &Vec<&str>) -> bool {
     result
 }
 
-fn address_supports_ssl(elems: &Vec<&str>) -> bool {
+fn address_supports_ssl(elems: &[&str]) -> bool {
     let mut result = false;
 
     let mut abas = Vec::new();
@@ -60,7 +57,7 @@ fn address_supports_ssl(elems: &Vec<&str>) -> bool {
         contains_aba(e, &mut abas);
     }
 
-    if abas.len() > 0 {
+    if !abas.is_empty() {
         // Loop strings outside brackets
         for e in elems.iter().skip(1).step_by(2) {
             for aba in &abas {
@@ -70,7 +67,7 @@ fn address_supports_ssl(elems: &Vec<&str>) -> bool {
                 }
             }
 
-            if result == true {
+            if result {
                 break
             }
         }
@@ -133,7 +130,7 @@ fn load_input(file: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     for line_res in buf_reader.lines() {
         let line = line_res?;
 
-        if line != "" {
+        if !line.is_empty() {
             lines.push(line);
         }
     }
