@@ -49,7 +49,7 @@ fn solve(eqns_in: &[ModEqn], debug: bool) -> u64 {
     let mut result = eqns[0].a;
     let mut last_eqn = eqns[0].clone();
 
-    for eqn in eqns {
+    for eqn in eqns.iter().skip(1) {
         if debug {
             println!("Calculating {:?} and {:?}", last_eqn, eqn);
         }
