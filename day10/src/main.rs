@@ -1,4 +1,4 @@
-use memmap::Mmap;
+use memmap2::Mmap;
 use std::{collections::{HashMap, VecDeque}, fs::File, io::{BufRead, BufReader}, rc::Rc};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

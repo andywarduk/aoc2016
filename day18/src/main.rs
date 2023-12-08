@@ -1,4 +1,4 @@
-use memmap::Mmap;
+use memmap2::Mmap;
 use std::{fs::File, io::{BufRead, BufReader}};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

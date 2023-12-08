@@ -1,6 +1,6 @@
 use std::{fmt, fs::File, io::{BufRead, BufReader}};
 
-use memmap::Mmap;
+use memmap2::Mmap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lines = load_input("input15.txt")?;

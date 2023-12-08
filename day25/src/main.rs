@@ -1,4 +1,4 @@
-use memmap::Mmap;
+use memmap2::Mmap;
 use std::{fmt, fs::File, io::{BufRead, BufReader}};
 
 const SAMPLE_SIZE: u16 = 1000;

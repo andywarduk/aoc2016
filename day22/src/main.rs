@@ -1,6 +1,6 @@
 use std::{borrow::Cow, cmp, collections::{HashSet, VecDeque}, fs::File, io::{BufRead, BufReader}};
 use gif::{Encoder, Frame};
-use memmap::Mmap;
+use memmap2::Mmap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lines = load_input("input22.txt")?;

@@ -1,7 +1,7 @@
 mod map;
 use crate::map::*;
 
-use memmap::Mmap;
+use memmap2::Mmap;
 use std::{borrow::Cow, cmp, collections::{HashMap, HashSet, VecDeque}, fs::File, io::{BufRead, BufReader}};
 use gif::{Frame, Encoder};
 
